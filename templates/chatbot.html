@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ title|default('Assistente Virtual IA') }}</title>
+
+  <!-- Highlight.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Marked.js -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    :root {
+      --primary-1:#6366f1;
+      --primary-2:#8b5cf6;
+      --bg-light:linear-gradient(135deg,#e0e7ff,#ede9fe);
+      --bg-dark:linear-gradient(135deg,#0f172a,#1e293b);
+      --chat-bg-light:#f9fafb;
+      --chat-bg-dark:#1e293b;
+      --bubble-user-light:linear-gradient(135deg,#6366f1,#8b5cf6);
+      --bubble-user-dark:linear-gradient(135deg,#4338ca,#7c3aed);
+      --bubble-bot-light:#fff;
+      --bubble-bot-dark:#111827;
+      --text-light:#111;
+      --text-dark:#f3f4f6;
+      --glass-light:rgba(255,255,255,0.94);
+      --glass-dark:rgba(17,24,39,0.9);
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      margin:0;min-height:100vh;
+      display:flex;align-items:center;justify-content:center;
+      padding:20px;
+      background:var(--bg-light);
+      color:var(--text-light);
+      transition:all 0.3s ease;
+    }
+    body.dark{background:var(--bg-dark);color:var(--text-dark);}
+    .app{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 360px;gap:20px;}
+    .card{background:var(--glass-light);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;display:flex;flex-direction:column;transition:all .3s;}
+    body.dark .card{background:var(--glass-dark);}
+    .chat{height:720px;padding:0;display:flex;flex-direction:column;}
+    .chat-header{
+      padding:22px;
+      background:linear-gradient(135deg,var(--primary-1),var(--primary-2));
+      color:#fff;display:flex;gap:12px;align-items:center;justify-content:space-between;
+    }
+    .chat-header .title{display:flex;gap:12px;align-items:center;}
+    .theme-toggle{background:rgba(255,255,255,0.2);border:none;border-radius:8px;padding:6px 10px;color:#fff;cursor:pointer;}
+    .chat-messages{flex:1;padding:22px;overflow:auto;background:var(--chat-bg-light);}
+    body.dark .chat-messages{background:var(--chat-bg-dark);}
+    .message{display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;}
+    .message.bot .bubble{background:var(--bubble-bot-light);color:var(--text-light);border-radius:14px;padding:12px 16px;box-shadow:0 6px 18px rgba(0,0,0,0.06);line-height:1.6;}
+    body.dark .message.bot .bubble{background:var(--bubble-bot-dark);color:var(--text-dark);}
+    .message.user{justify-content:flex-end;}
+    .message.user .bubble{background:var(--bubble-user-light);color:#fff;padding:12px 16px;border-radius:14px;}
+    body.dark .message.user .bubble{background:var(--bubble-user-dark);}
+    .chat-input{padding:18px;border-top:1px solid #eee;display:flex;gap:10px;align-items:center;background:#fff;}
+    body.dark .chat-input{background:#0f172a;border-top:1px solid #334155;}
+    .chat-input input[type="text"]{flex:1;padding:12px 14px;border-radius:12px;border:1px solid #e6e6e6;background:transparent;color:inherit;}
+    body.dark .chat-input input[type="text"]{border:1px solid #475569;}
+    .chat-input button{background:linear-gradient(135deg,var(--primary-1),var(--primary-2));color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;}
+    .upload-btn{background:#fff;border:1px solid #ddd;padding:8px;border-radius:10px;cursor:pointer;}
+    body.dark .upload-btn{background:#1e293b;border:1px solid #475569;color:#fff;}
+    .file-name{font-size:13px;margin-left:8px;}
+    .dashboard{height:720px;padding:18px;display:flex;flex-direction:column;gap:12px;}
+    .dash-header{font-weight:700;color:#fff;padding:16px;border-radius:10px;background:linear-gradient(135deg,#0f172a,#111827);}
+    .progress-list{background:#fff;border-radius:10px;padding:12px;flex:1;overflow:auto;}
+    body.dark .progress-list{background:#1e293b;color:#e2e8f0;}
+    .step{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;}
+    .step .dot{width:12px;height:12px;border-radius:50%;background:#e5e7eb;}
+    .step.done .dot{background:#10b981;}
+    .step.current .dot{background:#f59e0b;}
+    .step .text{font-size:14px;}
+    .mini-info{font-size:13px;color:#6b7280;padding:6px 10px;background:#fff;border-radius:8px;}
+    body.dark .mini-info{background:#1e293b;color:#e2e8f0;}
+    .spinner{width:16px;height:16px;border-radius:50%;border:3px solid #eee;border-top-color:#6366f1;animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    pre code{display:block;white-space:pre-wrap;word-break:break-word;padding:12px;border-radius:10px;}
+    .code-box{position:relative;margin-top:10px;border-radius:10px;overflow:hidden;}
+    .copy-btn{position:absolute;top:6px;right:6px;font-size:12px;padding:6px 10px;border:none;border-radius:6px;background:#6366f1;color:#fff;cursor:pointer;}
+    @media(max-width:980px){.app{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="card chat">
+    <div class="chat-header">
+      <div class="title">
+        <div style="font-size:22px">{{ bot_icon|default('🤖') }}</div>
+        <div>
+          <div style="font-weight:800;font-size:18px">{{ bot_name|default('Assistente Virtual') }}</div>
+          <div style="font-size:13px;opacity:0.9">{{ bot_status|default('Online 24/7') }}</div>
+        </div>
+      </div>
+      <button id="themeToggle" class="theme-toggle">🌙</button>
+    </div>
+    <div id="chatMessages" class="chat-messages">
+      <div class="welcome-message" style="text-align:center;opacity:0.8;padding:18px">
+        <h2>{{ welcome_title|default('👋 Olá! Bem-vindo!') }}</h2>
+        <p>{{ welcome_text|default('Sou seu assistente virtual. Envie uma mensagem ou anexe um arquivo para começar.') }}</p>
+      </div>
+    </div>
+    <div class="chat-input">
+      <input type="text" id="messageInput" placeholder="{{ input_placeholder|default('Digite sua mensagem...') }}" autocomplete="off" />
+      <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.py,.js,.html,.css,.json,.c,.cpp,.java,.sql,.xml,.md" style="display:none" />
+      <button id="uploadButton" class="upload-btn" title="Anexar arquivo">📎</button>
+      <span id="selectedFile" class="file-name"></span>
+      <button id="sendButton">{{ send_button_text|default('Enviar') }} →</button>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="dash-header">Dashboard de Processamento</div>
+    <div class="mini-info" id="statusSummary">Aguardando ação do usuário.</div>
+    <div class="progress-list card" id="progressList">
+      <div class="step" id="step-upload"><div class="dot"></div><div class="text">Arquivo selecionado</div></div>
+      <div class="step" id="step-parse"><div class="dot"></div><div class="text">Analisando / Extraindo texto</div></div>
+      <div class="step" id="step-send"><div class="dot"></div><div class="text">Enviando para o modelo</div></div>
+      <div class="step" id="step-receive"><div class="dot"></div><div class="text">Aguardando resposta</div></div>
+      <div class="step" id="step-done"><div class="dot"></div><div class="text">Concluído</div></div>
+    </div>
+    <div id="codeResult" style="background:#fff;border-radius:10px;padding:10px;display:none"></div>
+  </div>
+</div>
+
+<script>
+const API_ENDPOINT='{{ api_endpoint|default("/api/chat") }}';
+let conversationId='';
+const chatMessages=document.getElementById('chatMessages');
+const messageInput=document.getElementById('messageInput');
+const sendButton=document.getElementById('sendButton');
+const uploadButton=document.getElementById('uploadButton');
+const fileInput=document.getElementById('fileInput');
+const selectedFile=document.getElementById('selectedFile');
+const statusSummary=document.getElementById('statusSummary');
+const codeResult=document.getElementById('codeResult');
+const themeToggle=document.getElementById('themeToggle');
+
+function setTheme(dark){
+  document.body.classList.toggle('dark',dark);
+  themeToggle.textContent=dark?'☀️':'🌙';
+  localStorage.setItem('theme',dark?'dark':'light');
+}
+themeToggle.addEventListener('click',()=>setTheme(!document.body.classList.contains('dark')));
+if(window.matchMedia('(prefers-color-scheme: dark)').matches || localStorage.getItem('theme')==='dark'){setTheme(true);}
+
+const steps=['upload','parse','send','receive','done'].map(id=>document.getElementById('step-'+id));
+function updateStep(i,s){steps[i].classList.remove('done','current');if(s==='done')steps[i].classList.add('done');if(s==='current')steps[i].classList.add('current');}
+function resetSteps(){steps.forEach(s=>s.classList.remove('done','current'));statusSummary.textContent='Aguardando ação do usuário.';codeResult.style.display='none';codeResult.innerHTML='';}
+uploadButton.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',()=>{const f=fileInput.files[0];if(f){selectedFile.textContent=f.name;updateStep(0,'current');statusSummary.textContent='Arquivo selecionado: '+f.name;}});
+
+function addMessage(content,isUser=false){
+  const div=document.createElement('div');
+  div.className='message '+(isUser?'user':'bot');
+  const b=document.createElement('div');
+  b.className='bubble';
+  b.innerHTML=isUser?content:marked.parse(content);
+  div.appendChild(b);chatMessages.appendChild(div);chatMessages.scrollTop=chatMessages.scrollHeight;
+  if(!isUser)hljs.highlightAll();
+}
+
+function showTyping(){const d=document.createElement('div');d.className='message bot';d.id='typingIndicator';const b=document.createElement('div');b.className='bubble';b.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="spinner"></div><div>Processando...</div></div>';d.appendChild(b);chatMessages.appendChild(d);chatMessages.scrollTop=chatMessages.scrollHeight;}
+function removeTyping(){const t=document.getElementById('typingIndicator');if(t)t.remove();}
+
+async function sendMessage(){
+  const msg=messageInput.value.trim();const file=fileInput.files[0];
+  if(!msg&&!file)return;
+  addMessage(msg||('📎 '+file.name),true);messageInput.value='';sendButton.disabled=true;showTyping();
+  if(file){updateStep(0,'done');updateStep(1,'current');statusSummary.textContent='Extraindo texto...';}
+  else{updateStep(0,'done');updateStep(1,'done');updateStep(2,'current');statusSummary.textContent='Enviando para o modelo...';}
+  try{
+    const formData=new FormData();
+    if(msg)formData.append('message',msg);
+    if(conversationId)formData.append('conversation_id',conversationId);
+    if(file)formData.append('file',file);
+    updateStep(1,'done');updateStep(2,'current');
+    const r=await fetch(API_ENDPOINT,{method:'POST',body:formData});
+    updateStep(2,'done');updateStep(3,'current');
+    const data=await r.json();removeTyping();
+    if(data.success){
+      conversationId=data.conversation_id||conversationId;
+      addMessage(data.message,false);
+      updateStep(3,'done');updateStep(4,'done');
+      statusSummary.textContent='Concluído com sucesso.';displayCodeIfExists(data.message);
+    }else{
+      addMessage('⚠️ '+(data.error||'Erro desconhecido'),false);
+      statusSummary.textContent='Erro: '+(data.error||'Falha na resposta');
+      updateStep(3,'done');
+    }
+  }catch(e){
+    removeTyping();addMessage('⚠️ Erro de conexão: '+e.message,false);statusSummary.textContent='Erro de conexão.';
+  }finally{sendButton.disabled=false;fileInput.value='';selectedFile.textContent='';}
+}
+
+function displayCodeIfExists(text){
+  const re=/```([\w]*)\n([\s\S]*?)```/g;const m=[...text.matchAll(re)];
+  if(!m.length)return;codeResult.style.display='block';codeResult.innerHTML='<h3 style="margin:6px 0;font-size:16px">🧩 Código Gerado</h3>';
+  m.forEach(v=>{const lang=v[1]||'plaintext';const code=v[2].trim();const box=document.createElement('div');box.className='code-box';box.innerHTML=`<button class="copy-btn">Copiar</button><pre><code class="language-${lang}">${escapeHtml(code)}</code></pre>`;codeResult.appendChild(box);});
+  hljs.highlightAll();document.querySelectorAll('.copy-btn').forEach(b=>{b.onclick=()=>{navigator.clipboard.writeText(b.nextElementSibling.innerText);b.textContent='Copiado!';setTimeout(()=>b.textContent='Copiar',1500);};});
+}
+function escapeHtml(t){return t.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+sendButton.addEventListener('click',sendMessage);
+messageInput.addEventListener('keypress',e=>{if(e.key==='Enter')sendMessage();});
+resetSteps();
+</script>
+</body>
+</html>
